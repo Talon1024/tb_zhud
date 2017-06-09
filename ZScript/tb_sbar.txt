@@ -1,0 +1,424 @@
+class TrailbrazlerStatusBar : BaseStatusBar {
+
+	DynamicValueInterpolator upgradeInterpolator;
+	HUDFont smfont;
+	HUDFont lgfont;
+	int sbwidth;
+	int sbheight;
+	
+	int curWeapon;
+	
+	enum eSelWeapon {
+		WEAPON_SPIKEBOMB,
+		WEAPON_MACHETERANG,
+		WEAPON_SIDEKICK,
+		WEAPON_SIDEKICKHEXEN,
+		WEAPON_COLTS,
+		WEAPON_FLESHREND,
+		WEAPON_FLESHRENDHEXEN,
+		WEAPON_CHROMEJUSTICE,
+		WEAPON_CHROMEJUSTICEHEXEN,
+		WEAPON_LEADSPITTER,
+		WEAPON_LEADSPITTERHEXEN,
+		WEAPON_FMG,
+		WEAPON_FMGHEXEN,
+		WEAPON_PATRIARCH,
+		WEAPON_PATRIARCHHEXEN,
+		WEAPON_BITCHMAKER,
+		WEAPON_BITCHMAKERHEXEN,
+		WEAPON_SKULLTHROTTLE,
+		WEAPON_SKULLTHROTTLEHEXEN,
+		WEAPON_NUTCRACKER,
+		WEAPON_NUTCRACKERHEXEN,
+		NUM_WEAPONS
+	};
+
+	override void Init() {
+		Super.Init();
+
+		sbwidth = 320;
+		sbheight = 200;
+		SetSize (0, sbwidth, sbheight);
+
+		smfont = HUDFont.create(smallfont, smallfont.GetCharWidth("0"), true);
+		lgfont = HUDFont.create(bigfont, bigfont.GetCharWidth("0"), true);
+
+		curWeapon = 0;
+		upgradeInterpolator = DynamicValueInterpolator.Create(0, 0.25, 1, 8);
+	}
+
+	override void Draw(int state, double TicFrac) {
+		Super.Draw(state, TicFrac);
+		if (state == HUD_StatusBar || state == HUD_Fullscreen) {
+			BeginHUD();
+			DrawMainHUD();
+		}
+	}
+
+	class<Inventory> UpgradeForWeapon(int weapon) {
+		static const class<Inventory> WeaponUpgrades[] = {
+			"PipeUpgrade",
+			"MacheteUpgrade",
+			"SideUpgrade", "SideUpgrade",
+			"ColtsUpgrade",
+			"RendUpgrade", "RendUpgrade",
+			"ChromeUpgrade", "ChromeUpgrade",
+			"LeadUpgrade", "LeadUpgrade",
+			"FMGUpgrade", "FMGUpgrade",
+			"PattyUpgrade", "PattyUpgrade",
+			"BitchUpgrade", "BitchUpgrade",
+			"ThrottleUpgrade", "ThrottleUpgrade",
+			"NutterUpgrade", "NutterUpgrade"
+		};
+		return WeaponUpgrades[weapon];
+	}
+
+	class<Inventory> UpgradeCounterForWeapon(int weapon) {
+		static const class<Inventory> WeaponUpgradeCounters[] = {
+			"PipeUpgradeCounter",
+			"MacheteUpgradeCounter",
+			"SideUpgradeCounter", "SideUpgradeCounter",
+			"ColtsUpgradeCounter",
+			"RendUpgradeCounter", "RendUpgradeCounter",
+			"ChromeUpgradeCounter", "ChromeUpgradeCounter",
+			"LeadUpgradeCounter", "LeadUpgradeCounter",
+			"FMGUpgradeCounter", "FMGUpgradeCounter",
+			"PattyUpgradeCounter", "PattyUpgradeCounter",
+			"BitchUpgradeCounter", "BitchUpgradeCounter",
+			"ThrottleUpgradeCounter", "ThrottleUpgradeCounter",
+			"NutterUpgradeCounter", "NutterUpgradeCounter"
+		};
+		return WeaponUpgradeCounters[weapon];
+	}
+	
+	int GetSelectedWeapon() {
+		static const class<Weapon> WeaponTypes[] = {
+			"SpikebombWeapon",
+			"Macheterang",
+			"Sidekick", "Sidekick2", // "2" weapon variants use Hexen ammo
+			"Colts",
+			"Fleshrend", "Fleshrend2",
+			"ChromeJustice", "ChromeJustice2",
+			"Leadspitter", "Leadspitter2",
+			"FMG", "FMG2",
+			"Patriarch", "Patriarch2",
+			"Bitchmaker", "Bitchmaker2",
+			"Skullthrottle", "Skullthrottle2",
+			"Nutcracker", "Nutcracker2"
+		};
+		for (int i = 0; i < NUM_WEAPONS; i++) {
+			if (CPlayer.ReadyWeapon is WeaponTypes[i]) return i;
+		}
+		return NUM_WEAPONS;
+	}
+
+	protected void DrawMainHUD() {
+
+		static const class<Ammo> AmmoTypes[] = {
+			"BulletAmmo", "ShellsAmmo", "DemShellsAmmo", "GrenadeAmmo", "HellraiserAmmo", "ThrottleAmmo", "TwoBoreAmmo", "SpikebombAmmo"};
+		static const String AmmoTypeBrightImages[] = {"BULLAMMO", "SHOTAMMO", "DSHTAMMO", "GRNDAMMO", "MAGNAMMO", "MINGAMMO", "2BORAMMO", "PIPEAMMO"};
+		static const String AmmoTypeDarkImages[] = {"BULLAMM2", "SHOTAMM2", "DSHTAMM2", "GRNDAMM2", "MAGNAMM2", "MINGAMM2", "2BORAMM2", "PIPEAMM2"};
+		
+		static const class<Ammo> AmmoTypesHexen[] = {"BlueMana", "GreenMana", "SpikebombAmmo"};
+		static const String AmmoTypeBrightImagesHexen[] = {"MANABRT1", "MANABRT2", "PIPEAMMO"};
+		static const String AmmoTypeDarkImagesHexen[] = {"MANADIM1", "MANADIM2", "PIPEAMM2"};
+
+		// Mugshot and health
+		DrawTexture(GetMugshot(5, default_face: "BAD"), (16, -54), DI_ITEM_OFFSETS);
+		//DrawString(lgfont, FormatNumber(CPlayer.health, 3), (28, -20), DI_TEXT_ALIGN_CENTER | DI_ITEM_OFFSETS);
+		DrawString(lgfont, FormatNumber(CPlayer.health, 1, 3), (30, -20), DI_TEXT_ALIGN_CENTER | DI_ITEM_OFFSETS);
+
+		// Armor
+		let armor = BasicArmor(CPlayer.mo.FindInventory("BasicArmor"));
+		if (armor != null && armor.Amount > 0) {
+			DrawInventoryIcon(armor, (80, -25));
+
+			// Font colour is based on type of armor rather than amount
+			int armorColour = Font.CR_UNTRANSLATED;
+			String armorClass = armor.ArmorType;
+
+			if (armorClass == "SecurityVest") {
+				armorColour = Font.CR_GREEN;
+			} else if (armorClass == "BodyArmor" || armorClass == "MegasphereArmor2") {
+				armorColour = Font.CR_BLUE;
+			} else if (armorClass == "TacticalSet") {
+				armorColour = Font.CR_DARKRED;
+			} else { // Armor bonus
+				armorColour = Font.CR_LIGHTBLUE;
+			}
+
+			DrawString(lgfont, FormatNumber(armor.Amount, 3), (80, -20), DI_TEXT_ALIGN_CENTER, armorColour);
+		}
+
+		// Inventory
+		DrawInventoryIcon(CPlayer.mo.InvSel, (130, -20));
+		if (CPlayer.mo.InvSel.amount > 1) {
+			DrawString(smfont, FormatNumber(CPlayer.mo.InvSel.amount, 3), (130, -15), DI_TEXT_ALIGN_CENTER);
+		}
+
+		// Jetpack
+		class<Inventory> JetpackType = (gameinfo.gametype == GAME_Hexen) ? "Jetpack2" : "Jetpack";
+		let jetpack = CPlayer.mo.FindInventory(JetpackType);
+		if (jetpack != null && jetpack.amount > 0) {
+			DrawString(smfont, FormatNumber(jetpack.amount, 3), (175, -44), DI_TEXT_ALIGN_RIGHT, Font.CR_GOLD);
+			DrawImage("jetpack", (180, -34));
+		}
+
+		// Pisskey
+		let whiskey = CPlayer.mo.FindInventory("Whiskey");
+		if (whiskey != null && whiskey.amount > 0) {
+			DrawString(smfont, FormatNumber(whiskey.amount, 3), (175, -32), DI_TEXT_ALIGN_RIGHT, Font.CR_YELLOW);
+			DrawImage("whiskey", (180, -22));
+		}
+
+		// Hazmat suit
+		let hazmat = CPlayer.mo.FindInventory("Hazmatsuit");
+		if (hazmat != null && hazmat.amount > 0) {
+			DrawString(smfont, FormatNumber(hazmat.amount, 3), (175, -20), DI_TEXT_ALIGN_RIGHT, Font.CR_DARKGREEN);
+			DrawImage("envysuit", (180, -10));
+		}
+
+		// Nicotine rush points
+		let nicotine = CPlayer.mo.FindInventory("NicotineToken");
+		if (nicotine != null && nicotine.amount > 0) {
+			DrawString(smfont, FormatNumber(nicotine.amount, 3), (215, -44), DI_TEXT_ALIGN_RIGHT, Font.CR_UNTRANSLATED);
+			DrawImage("nicotine", (220, -34));
+		}
+
+		// Scrap
+		let scrap = CPlayer.mo.FindInventory("JunkItem");
+		if (scrap != null && scrap.amount > 0) {
+			DrawString(smfont, FormatNumber(scrap.amount, 3), (215, -32), DI_TEXT_ALIGN_RIGHT, Font.CR_UNTRANSLATED);
+			DrawImage("spanner", (220, -22));
+		}
+
+		// go eat shit fuckers
+		let fisherprice = CPlayer.mo.FindInventory("FisherPrice");
+		if (fisherprice != null && fisherprice.Amount > 0) {
+			DrawString(smfont, FormatNumber(fisherprice.amount, 3), (215, -20), DI_TEXT_ALIGN_RIGHT, Font.CR_GREEN);
+			DrawImage("fisher", (220, -10));
+		}
+
+		// Ammo for all weapons
+		if (gameinfo.gametype != GAME_Hexen) {
+			for (int i = 0; i < 8; i++) {
+				int ammoMaxAmount = 0;
+				int ammoAmount = 0;
+				[ammoAmount, ammoMaxAmount] = GetAmount(AmmoTypes[i]);
+
+				DrawBar(AmmoTypeBrightImages[i], AmmoTypeDarkImages[i], ammoAmount, ammoMaxAmount, (-12, -4 - i * 10), 0, SHADER_VERT | SHADER_REVERSE);
+				int ammoAmountColor = Font.CR_BLACK;
+				if (WeaponUsesAmmoType(AmmoTypes[i])) {
+					ammoAmountColor = Font.CR_UNTRANSLATED;
+				}
+				DrawString(smfont, FormatNumber(ammoAmount, 4), (-22, -14 - i * 10), DI_TEXT_ALIGN_RIGHT, ammoAmountColor);
+			}
+		} else {
+			for (int i = 0; i < 3; i++) {
+				int ammoMaxAmount = 0;
+				int ammoAmount = 0;
+				[ammoAmount, ammoMaxAmount] = GetAmount(AmmoTypesHexen[i]);
+
+				DrawBar(AmmoTypeBrightImagesHexen[i], AmmoTypeDarkImagesHexen[i], ammoAmount, ammoMaxAmount, (-12, -4 - i * 20), 0, SHADER_VERT | SHADER_REVERSE);
+				int ammoAmountColor = Font.CR_BLACK;
+				if (WeaponUsesAmmoType(AmmoTypesHexen[i])) {
+					ammoAmountColor = Font.CR_UNTRANSLATED;
+				}
+				DrawString(smfont, FormatNumber(ammoAmount, 4), (-22, -14 - i * 20), DI_TEXT_ALIGN_RIGHT, ammoAmountColor);
+			}
+		}
+
+		// Current weapon ammo
+		if (CPlayer.ReadyWeapon.AmmoType1 != null && !(CPlayer.ReadyWeapon is "Colts" && CPlayer.mo.FindInventory("ColtsUpgrade") != null && CPlayer.mo.FindInventory("ColtsUpgrade").Amount > 0)) {
+			int ammoAmount = CPlayer.mo.FindInventory(CPlayer.ReadyWeapon.AmmoType1).Amount;
+			DrawString(lgfont, FormatNumber(ammoAmount, 4), (-200, -20), DI_TEXT_ALIGN_LEFT);
+		}
+		if (CPlayer.ReadyWeapon is "Colts" && CPlayer.mo.FindInventory("ColtsUpgrade") == null) {
+			int ammoAmount = CPlayer.mo.FindInventory(CPlayer.ReadyWeapon.AmmoType2).Amount;
+			DrawString(lgfont, FormatNumber(ammoAmount, 4), (-200, -40), DI_TEXT_ALIGN_LEFT);
+		} else if (CPlayer.ReadyWeapon is "Leadspitter" && CPlayer.mo.FindInventory("LeadspitPickupCounter").Amount >= 2) {
+			int ammoAmount = CPlayer.mo.FindInventory("UziClipLeft").Amount;
+			DrawString(lgfont, FormatNumber(ammoAmount, 4), (-200, -40), DI_TEXT_ALIGN_LEFT);
+		} else if (CPlayer.ReadyWeapon is "Skullthrottle2" || CPlayer.ReadyWeapon is "Nutcracker2") {
+			int ammoAmount = CPlayer.mo.FindInventory("GreenMana").Amount;
+			DrawString(lgfont, FormatNumber(ammoAmount, 4), (-200, -40), DI_TEXT_ALIGN_LEFT);
+		}
+
+		// Current weapon icon
+		if (CPlayer.ReadyWeapon is "SpikebombWeapon") {
+			let rift = CPlayer.mo.FindInventory("RiftbombActive");
+			let implode = CPlayer.mo.FindInventory("PipeMode");
+			if (rift != null && rift.Amount > 0) {
+				DrawImage("SPBMRIFT", (-101, -7));
+				//DrawImage("SPBMRIFT", (-100, -30), DI_ITEM_OFFSETS);
+			}
+			if (implode != null && implode.Amount > 0) {
+				DrawImage("SPBMIMPL", (-100, -1));
+				//DrawImage("SPBMIMPL", (-100, -30));
+			}
+			DrawImage("PBMBZ0", (-99, -30));
+		} else if (CPlayer.ReadyWeapon is "Macheterang") {
+			if (CPlayer.mo.FindInventory("MacheteUpgrade") != null) {
+				DrawImage("MCHGY0", (-100, -30), DI_ITEM_OFFSETS);
+			} else {
+				DrawImage("MCHGX0", (-100, -30), DI_ITEM_OFFSETS);
+			}
+		} else if (CPlayer.ReadyWeapon is "Sidekick" || CPlayer.ReadyWeapon is "Sidekick2") {
+			if (CPlayer.mo.FindInventory("SideUpgrade") != null) {
+				DrawImage("SD2GX0", (-100, -30), DI_ITEM_OFFSETS);
+			} else {
+				DrawImage("SDKGX0", (-100, -30), DI_ITEM_OFFSETS);
+			}
+			if (CPlayer.mo.FindInventory("UraniumShot") != null) {
+				DrawImage("uranus", (-80, -25), DI_ITEM_OFFSETS);
+			}
+		} else if (CPlayer.ReadyWeapon is "Colts") {
+			DrawImage("COLTX0", (-100, -30), DI_ITEM_OFFSETS);
+			/*
+			// In case the Colt Burstshot upgrade icon becomes a thing in the future...
+			let coltBurst = CPlayer.mo.FindInventory("ColtBurstshot");
+			if (coltBurst != null) {
+				DrawImage("imghere", (-80, -25), DI_ITEM_OFFSETS);
+			}
+			*/
+		} else if (CPlayer.ReadyWeapon is "Fleshrend" || CPlayer.ReadyWeapon is "Fleshrend2") {
+			let dualRends = CPlayer.mo.FindInventory("FleshrendPickupCounter");
+			if (CPlayer.mo.FindInventory("RendUpgrade") != null) {
+				DrawImage("RN3GX0", (-100, -30), DI_ITEM_OFFSETS);
+				if (dualRends != null && dualRends.Amount > 1) {
+					DrawImage("RN3GX0", (-90, -24), DI_ITEM_OFFSETS);
+				}
+			} else {
+				DrawImage("RNDGX0", (-100, -30), DI_ITEM_OFFSETS);
+				if (dualRends != null && dualRends.Amount > 1) {
+					DrawImage("RNDGX0", (-90, -24), DI_ITEM_OFFSETS);
+				}
+			}
+			if (CPlayer.mo.FindInventory("TricorneShot") != null) {
+				DrawImage("tricorne", (-80, -25), DI_ITEM_OFFSETS);
+			}
+		} else if (CPlayer.ReadyWeapon is "ChromeJustice" || CPlayer.ReadyWeapon is "ChromeJustice2") {
+			if (CPlayer.mo.FindInventory("ChromeUpgrade") != null) {
+				DrawImage("SPSGX0", (-100, -30), DI_ITEM_OFFSETS);
+			} else {
+				DrawImage("PCFGX0", (-100, -30), DI_ITEM_OFFSETS);
+			}
+			if (CPlayer.mo.FindInventory("JusticeStriploader") != null) {
+				DrawImage("fastldr", (-80, -25), DI_ITEM_OFFSETS);
+			}
+		} else if (CPlayer.ReadyWeapon is "Leadspitter" || CPlayer.ReadyWeapon is "Leadspitter2") {
+			let dualSpitters = CPlayer.mo.FindInventory("LeadspitPickupCounter");
+			if (CPlayer.mo.FindInventory("LeadUpgrade") != null) {
+				DrawImage("TIKGX0", (-100, -30), DI_ITEM_OFFSETS);
+				if (dualSpitters != null && dualSpitters.Amount > 1) {
+					DrawImage("TIKGX0", (-90, -20), DI_ITEM_OFFSETS);
+				}
+			} else {
+				DrawImage("UZIGX0", (-100, -30), DI_ITEM_OFFSETS);
+				if (dualSpitters != null && dualSpitters.Amount > 1) {
+					DrawImage("UZIGX0", (-90, -20), DI_ITEM_OFFSETS);
+				}
+			}
+			if (CPlayer.mo.FindInventory("SpontaneousFreedom") != null) {
+				DrawImage("frdmmisl", (-80, -25), DI_ITEM_OFFSETS);
+			}
+		} else if (CPlayer.ReadyWeapon is "FMG" || CPlayer.ReadyWeapon is "FMG2") {
+			if (CPlayer.mo.FindInventory("FMGUpgrade") != null) {
+				DrawImage("2MGGX0", (-100, -30), DI_ITEM_OFFSETS);
+				let fniper = CPlayer.mo.FindInventory("FMGSniperMode");
+				if (fniper != null && fniper.Amount > 0) {
+					DrawImage("fmgcross", (-80, -25), DI_ITEM_OFFSETS);
+				} else {
+					DrawImage("fmgcross", (-80, -25), DI_ITEM_OFFSETS, 0.2);
+				}
+			} else {
+				DrawImage("FMGGX0", (-100, -30), DI_ITEM_OFFSETS);
+			}
+			if (CPlayer.mo.FindInventory("HeavyMachinegun") != null) {
+				DrawImage("FHGGX0", (-100, -30), DI_ITEM_OFFSETS);
+			}
+		} else if (CPlayer.ReadyWeapon is "Patriarch" || CPlayer.ReadyWeapon is "Patriarch2") {
+			if (CPlayer.mo.FindInventory("PattyUpgrade") != null) {
+				DrawImage("PTUGX0", (-100, -30), DI_ITEM_OFFSETS);
+			} else {
+				DrawImage("PTRGX0", (-100, -30), DI_ITEM_OFFSETS);
+			}
+			if (CPlayer.mo.FindInventory("PatriarchToggler") != null) {
+				let homingGrenades = CPlayer.mo.FindInventory("HomingGrenades");
+				if (homingGrenades != null && homingGrenades.Amount > 0) {
+					DrawImage("ptgshot", (-80, -25), DI_ITEM_OFFSETS);
+				} else {
+					DrawImage("ptgshot", (-80, -25), DI_ITEM_OFFSETS, 0.2);
+				}
+			}
+		} else if (CPlayer.ReadyWeapon is "Bitchmaker" || CPlayer.ReadyWeapon is "Bitchmaker2") {
+			if (CPlayer.mo.FindInventory("BitchUpgrade") != null) {
+				DrawImage("BUTGX0", (-100, -30), DI_ITEM_OFFSETS);
+			} else {
+				DrawImage("BITGX0", (-100, -30), DI_ITEM_OFFSETS);
+			}
+			if (CPlayer.mo.FindInventory("KeepShooting") != null) {
+				DrawImage("keepshot", (-80, -25), DI_ITEM_OFFSETS);
+			}
+		} else if (CPlayer.ReadyWeapon is "Skullthrottle" || CPlayer.ReadyWeapon is "Skullthrottle2") {
+			if (CPlayer.mo.FindInventory("ThrottleUpgrade") != null) {
+				DrawImage("BRWNTHRT", (-100, -30), DI_ITEM_OFFSETS);
+			} else {
+				DrawImage("CHNGX0", (-100, -30), DI_ITEM_OFFSETS);
+			}
+			if (CPlayer.mo.FindInventory("ThrottleInstaspin") != null) {
+				DrawImage("revup", (-80, -25), DI_ITEM_OFFSETS);
+			}
+		} else if (CPlayer.ReadyWeapon is "Nutcracker" || CPlayer.ReadyWeapon is "Nutcracker2") {
+			if (CPlayer.mo.FindInventory("NutterUpgrade") != null) {
+				DrawImage("NTFGX0", (-100, -30), DI_ITEM_OFFSETS);
+			} else {
+				DrawImage("NTCGX0", (-100, -30), DI_ITEM_OFFSETS);
+			}
+			if (CPlayer.mo.FindInventory("NutForceOne") != null) {
+				DrawImage("nutforce", (-80, -25), DI_ITEM_OFFSETS);
+			}
+		}
+
+		// Weapon upgrade meters
+		let weaponUpgrade = CPlayer.mo.FindInventory(UpgradeForWeapon(curWeapon));
+		if (weaponUpgrade == null || weaponUpgrade.Amount == 0) {
+			int upgradeprogress, upgradetotal;
+			[upgradeprogress, upgradetotal] = GetAmount(UpgradeCounterForWeapon(curWeapon));
+			upgradeprogress = upgradeInterpolator.GetValue();
+			DrawBar("upgbar2", "upgbar1", upgradeprogress, upgradetotal, (-100, -5), 0, SHADER_HORZ);
+			DrawString(smfont, FormatNumber(upgradeprogress, 1, 3) .. "/" .. FormatNumber(upgradetotal, 2, 3), (-116, -15), DI_TEXT_ALIGN_LEFT);
+		}
+
+		// Keys
+		Vector2 keypos = (18, -64);
+		for (let i = CPlayer.mo.Inv; i != null; i = i.Inv) {
+			if (i is "Key" && i.Icon.IsValid()) {
+				int keyIconWidth, keyIconHeight;
+				[keyIconWidth, keyIconHeight] = TexMan.GetSize(i.Icon);
+				keypos.Y = -56 - keyIconHeight / 2;
+				DrawTexture(i.Icon, keypos);
+				keypos.X += keyIconWidth + 3;
+			}
+		}
+	}
+
+	override void NewGame ()
+	{
+		Super.NewGame();
+		upgradeInterpolator.Reset (0);
+	}
+
+	override void Tick()
+	{
+		Super.Tick();
+		int pWeapon = GetSelectedWeapon();
+		int upgradeprogress = GetAmount(UpgradeCounterForWeapon(pWeapon));
+		if (curWeapon != pWeapon) {
+			curWeapon = pWeapon;
+			upgradeInterpolator.Reset(upgradeprogress);
+		} else {
+			upgradeInterpolator.Update(upgradeprogress);
+		}
+	}
+}
