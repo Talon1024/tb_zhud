@@ -1,12 +1,14 @@
 class TrailbrazlerStatusBar : BaseStatusBar {
 
 	DynamicValueInterpolator upgradeInterpolator;
+	DynamicValueInterpolator gloryInterpolator;
 	HUDFont smfont;
 	HUDFont lgfont;
 	int sbwidth;
 	int sbheight;
 	
 	int curWeapon;
+	int gloryTimer;
 	
 	enum eSelWeapon {
 		WEAPON_SPIKEBOMB,
@@ -45,6 +47,8 @@ class TrailbrazlerStatusBar : BaseStatusBar {
 
 		curWeapon = 0;
 		upgradeInterpolator = DynamicValueInterpolator.Create(0, 0.25, 1, 8);
+		gloryInterpolator = DynamicValueInterpolator.Create(0, 0.25, 1, 8);
+		gloryTimer = 0;
 	}
 
 	override void Draw(int state, double TicFrac) {
@@ -383,11 +387,11 @@ class TrailbrazlerStatusBar : BaseStatusBar {
 		// Weapon upgrade meters
 		let weaponUpgrade = CPlayer.mo.FindInventory(UpgradeForWeapon(curWeapon));
 		if (weaponUpgrade == null || weaponUpgrade.Amount == 0) {
-			int upgradeprogress, upgradetotal;
-			[upgradeprogress, upgradetotal] = GetAmount(UpgradeCounterForWeapon(curWeapon));
-			upgradeprogress = upgradeInterpolator.GetValue();
+			int absoluteupgradeprogress, upgradetotal;
+			[absoluteupgradeprogress, upgradetotal] = GetAmount(UpgradeCounterForWeapon(curWeapon));
+			int upgradeprogress = upgradeInterpolator.GetValue();
 			DrawBar("upgbar2", "upgbar1", upgradeprogress, upgradetotal, (-100, -5), 0, SHADER_HORZ);
-			DrawString(smfont, FormatNumber(upgradeprogress, 1, 3) .. "/" .. FormatNumber(upgradetotal, 2, 3), (-116, -15), DI_TEXT_ALIGN_LEFT);
+			DrawString(smfont, FormatNumber(absoluteupgradeprogress, 1, 3) .. "/" .. FormatNumber(upgradetotal, 2, 3), (-116, -15), DI_TEXT_ALIGN_LEFT);
 		}
 
 		// Keys
@@ -401,12 +405,19 @@ class TrailbrazlerStatusBar : BaseStatusBar {
 				keypos.X += keyIconWidth + 3;
 			}
 		}
+
+		// Glory shot recharge meter
+		if (gloryTimer > 0) {
+			int gloryMax = GetMaxAmount("GloryShotTimer");
+			DrawBar("glrycun2", "glrycunt", gloryInterpolator.GetValue(), gloryMax, (-240, -10), 0, SHADER_REVERSE);
+		}
 	}
 
 	override void NewGame ()
 	{
 		Super.NewGame();
-		upgradeInterpolator.Reset (0);
+		upgradeInterpolator.Reset(0);
+		gloryInterpolator.Reset(0);
 	}
 
 	override void Tick()
@@ -419,6 +430,19 @@ class TrailbrazlerStatusBar : BaseStatusBar {
 			upgradeInterpolator.Reset(upgradeprogress);
 		} else {
 			upgradeInterpolator.Update(upgradeprogress);
+		}
+
+		let gloryTimerInv = CPlayer.mo.FindInventory("GloryShotTimer");
+		if (gloryTimerInv != null) {
+			gloryTimer = gloryTimerInv.Amount;
+		} else {
+			gloryTimer = 0;
+		}
+		int gloryTimerMax = GetMaxAmount("GloryShotTimer");
+		if (gloryTimer == gloryTimerMax) {
+			gloryInterpolator.Reset(gloryTimerMax);
+		} else {
+			gloryInterpolator.Update(gloryTimer);
 		}
 	}
 }
