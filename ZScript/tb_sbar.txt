@@ -2,6 +2,7 @@ class TrailbrazlerStatusBar : BaseStatusBar {
 
 	DynamicValueInterpolator upgradeInterpolator;
 	DynamicValueInterpolator gloryInterpolator;
+	DynamicValueInterpolator pipeInterpolator;
 	HUDFont smfont;
 	HUDFont lgfont;
 	int sbwidth;
@@ -9,6 +10,7 @@ class TrailbrazlerStatusBar : BaseStatusBar {
 	
 	int curWeapon;
 	int gloryTimer;
+	int pipeTimer;
 	
 	enum eSelWeapon {
 		WEAPON_SPIKEBOMB,
@@ -48,7 +50,10 @@ class TrailbrazlerStatusBar : BaseStatusBar {
 		curWeapon = 0;
 		upgradeInterpolator = DynamicValueInterpolator.Create(0, 0.25, 1, 8);
 		gloryInterpolator = DynamicValueInterpolator.Create(0, 0.25, 1, 8);
+		pipeInterpolator = DynamicValueInterpolator.Create(0, 0.25, 1, 8);
+
 		gloryTimer = 0;
+		pipeTimer = 0;
 	}
 
 	override void Draw(int state, double TicFrac) {
@@ -407,9 +412,14 @@ class TrailbrazlerStatusBar : BaseStatusBar {
 		}
 
 		// Glory shot recharge meter
+		int gloryTimerMax = GetMaxAmount("GloryShotTimer");
 		if (gloryTimer > 0) {
-			int gloryMax = GetMaxAmount("GloryShotTimer");
-			DrawBar("glrycun2", "glrycunt", gloryInterpolator.GetValue(), gloryMax, (-240, -10), 0, SHADER_REVERSE);
+			DrawBar("glrycun2", "glrycunt", gloryInterpolator.GetValue(), gloryTimerMax, (-240, -10), 0, SHADER_VERT | SHADER_REVERSE);
+		}
+		// Spikebomb quick-toss recharge meter
+		int pipeTimerMax = GetMaxAmount("PipeTossTimer");
+		if (pipeTimer > 0) {
+			DrawBar("pipetim2", "pipetime", pipeInterpolator.GetValue(), pipeTimerMax, (-250, -10), 0, SHADER_VERT | SHADER_REVERSE);
 		}
 	}
 
@@ -444,5 +454,19 @@ class TrailbrazlerStatusBar : BaseStatusBar {
 		} else {
 			gloryInterpolator.Update(gloryTimer);
 		}
+
+		let pipeTimerInv = CPlayer.mo.FindInventory("PipeTossTimer");
+		if (pipeTimerInv != null) {
+			pipeTimer = pipeTimerInv.Amount;
+		} else {
+			pipeTimer = 0;
+		}
+		int pipeTimerMax = GetMaxAmount("PipeTossTimer");
+		if (pipeTimer == pipeTimerMax) {
+			pipeInterpolator.Reset(pipeTimerMax);
+		} else {
+			pipeInterpolator.Update(pipeTimer);
+		}
+
 	}
 }
