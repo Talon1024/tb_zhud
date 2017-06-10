@@ -419,7 +419,7 @@ class TrailbrazlerStatusBar : BaseStatusBar {
 		// Spikebomb quick-toss recharge meter
 		int pipeTimerMax = GetMaxAmount("PipeTossTimer");
 		if (pipeTimer > 0) {
-			DrawBar("pipetim2", "pipetime", pipeInterpolator.GetValue(), pipeTimerMax, (-250, -10), 0, SHADER_VERT | SHADER_REVERSE);
+			DrawBar("pipetime", "pipetim2", pipeInterpolator.GetValue(), pipeTimerMax, (-250, -10), 0, SHADER_VERT | SHADER_REVERSE);
 		}
 	}
 
@@ -434,8 +434,13 @@ class TrailbrazlerStatusBar : BaseStatusBar {
 	{
 		Super.Tick();
 		int pWeapon = GetSelectedWeapon();
-		int upgradeprogress = GetAmount(UpgradeCounterForWeapon(pWeapon));
-		if (curWeapon != pWeapon) {
+		int upgradeprogress;
+		if (pWeapon != NUM_WEAPONS) {
+			upgradeprogress = GetAmount(UpgradeCounterForWeapon(pWeapon));
+		} else {
+			upgradeprogress = GetAmount(UpgradeCounterForWeapon(curWeapon));
+		}
+		if (curWeapon != pWeapon && pWeapon != NUM_WEAPONS) {
 			curWeapon = pWeapon;
 			upgradeInterpolator.Reset(upgradeprogress);
 		} else {
