@@ -422,12 +422,12 @@ class TrailbrazlerStatusBar : BaseStatusBar {
 		// Glory shot recharge meter
 		int gloryTimerMax = GetMaxAmount("GloryShotTimer");
 		if (gloryTimer > 0) {
-			DrawBar("glrycun2", "glrycunt", gloryInterpolator.GetValue(), gloryTimerMax, (-240, -10), 0, SHADER_VERT | SHADER_REVERSE);
+			DrawBar("glrycun2", "glrycunt", gloryInterpolator.GetValue(), gloryTimerMax, (7, -3), 0, SHADER_VERT | SHADER_REVERSE, DI_SCREEN_CENTER_BOTTOM);
 		}
 		// Spikebomb quick-toss recharge meter
 		int pipeTimerMax = GetMaxAmount("PipeTossTimer");
 		if (pipeTimer > 0) {
-			DrawBar("pipetime", "pipetim2", pipeInterpolator.GetValue(), pipeTimerMax, (-250, -10), 0, SHADER_VERT | SHADER_REVERSE);
+			DrawBar("pipetime", "pipetim2", pipeInterpolator.GetValue(), pipeTimerMax, (-7, -3), 0, SHADER_VERT | SHADER_REVERSE, DI_SCREEN_CENTER_BOTTOM);
 		}
 	}
 
