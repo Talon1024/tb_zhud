@@ -34,6 +34,7 @@ class TrailbrazlerStatusBar : BaseStatusBar {
 		WEAPON_SKULLTHROTTLEHEXEN,
 		WEAPON_NUTCRACKER,
 		WEAPON_NUTCRACKERHEXEN,
+		WEAPON_PIPETOSS,
 		NUM_WEAPONS
 	};
 
@@ -79,7 +80,8 @@ class TrailbrazlerStatusBar : BaseStatusBar {
 			"ThrottleUpgrade", "ThrottleUpgrade",
 			"NutterUpgrade", "NutterUpgrade"
 		};
-		return WeaponUpgrades[weapon];
+		if (weapon > WeaponUpgrades.Size()) return null;
+		else return WeaponUpgrades[weapon];
 	}
 
 	class<Inventory> UpgradeCounterForWeapon(int weapon) {
@@ -97,7 +99,8 @@ class TrailbrazlerStatusBar : BaseStatusBar {
 			"ThrottleUpgradeCounter", "ThrottleUpgradeCounter",
 			"NutterUpgradeCounter", "NutterUpgradeCounter"
 		};
-		return WeaponUpgradeCounters[weapon];
+		if (weapon > WeaponUpgradeCounters.Size()) return null;
+		else return WeaponUpgradeCounters[weapon];
 	}
 	
 	int GetSelectedWeapon() {
@@ -113,12 +116,13 @@ class TrailbrazlerStatusBar : BaseStatusBar {
 			"Patriarch", "Patriarch2",
 			"Bitchmaker", "Bitchmaker2",
 			"Skullthrottle", "Skullthrottle2",
-			"Nutcracker", "Nutcracker2"
+			"Nutcracker", "Nutcracker2",
+			"SpikebombTossWeapon"
 		};
 		for (int i = 0; i < NUM_WEAPONS; i++) {
 			if (CPlayer.ReadyWeapon is WeaponTypes[i]) return i;
 		}
-		return NUM_WEAPONS;
+		return NUM_WEAPONS; // Invalid weapon
 	}
 
 	protected void DrawMainHUD() {
@@ -161,7 +165,7 @@ class TrailbrazlerStatusBar : BaseStatusBar {
 
 		// Inventory
 		DrawInventoryIcon(CPlayer.mo.InvSel, (130, -20));
-		if (CPlayer.mo.InvSel.amount > 1) {
+		if (CPlayer.mo.InvSel != null && CPlayer.mo.InvSel.amount > 1) {
 			DrawString(smfont, FormatNumber(CPlayer.mo.InvSel.amount, 3), (130, -15), DI_TEXT_ALIGN_CENTER);
 		}
 
@@ -249,6 +253,7 @@ class TrailbrazlerStatusBar : BaseStatusBar {
 			int ammoAmount = CPlayer.mo.FindInventory("UziClipLeft").Amount;
 			DrawString(lgfont, FormatNumber(ammoAmount, 4), (-200, -40), DI_TEXT_ALIGN_LEFT);
 		} else if (CPlayer.ReadyWeapon is "Skullthrottle2" || CPlayer.ReadyWeapon is "Nutcracker2") {
+			// Hexen versions of Skullthrottle and Nutcracker use both blue and green mana.
 			int ammoAmount = CPlayer.mo.FindInventory("GreenMana").Amount;
 			DrawString(lgfont, FormatNumber(ammoAmount, 4), (-200, -40), DI_TEXT_ALIGN_LEFT);
 		}
@@ -392,11 +397,14 @@ class TrailbrazlerStatusBar : BaseStatusBar {
 		// Weapon upgrade meters
 		let weaponUpgrade = CPlayer.mo.FindInventory(UpgradeForWeapon(curWeapon));
 		if (weaponUpgrade == null || weaponUpgrade.Amount == 0) {
-			int absoluteupgradeprogress, upgradetotal;
-			[absoluteupgradeprogress, upgradetotal] = GetAmount(UpgradeCounterForWeapon(curWeapon));
-			int upgradeprogress = upgradeInterpolator.GetValue();
-			DrawBar("upgbar2", "upgbar1", upgradeprogress, upgradetotal, (-100, -5), 0, SHADER_HORZ);
-			DrawString(smfont, FormatNumber(absoluteupgradeprogress, 1, 3) .. "/" .. FormatNumber(upgradetotal, 2, 3), (-116, -15), DI_TEXT_ALIGN_LEFT);
+			let upgradeCounter = UpgradeCounterForWeapon(curWeapon);
+			if (upgradeCounter != null) {
+				int absoluteupgradeprogress, upgradetotal;
+				[absoluteupgradeprogress, upgradetotal] = GetAmount(UpgradeCounterForWeapon(curWeapon));
+				int upgradeprogress = upgradeInterpolator.GetValue();
+				DrawBar("upgbar2", "upgbar1", upgradeprogress, upgradetotal, (-100, -5), 0, SHADER_HORZ);
+				DrawString(smfont, FormatNumber(absoluteupgradeprogress, 1, 3) .. "/" .. FormatNumber(upgradetotal, 2, 3), (-116, -15), DI_TEXT_ALIGN_LEFT);
+			}
 		}
 
 		// Keys
@@ -436,11 +444,14 @@ class TrailbrazlerStatusBar : BaseStatusBar {
 		int pWeapon = GetSelectedWeapon();
 		int upgradeprogress;
 		if (pWeapon != NUM_WEAPONS) {
-			upgradeprogress = GetAmount(UpgradeCounterForWeapon(pWeapon));
-		} else {
-			upgradeprogress = GetAmount(UpgradeCounterForWeapon(curWeapon));
+			class<Inventory> upgradeCounter;
+			if (pWeapon != WEAPON_PIPETOSS) {
+				upgradeCounter = UpgradeCounterForWeapon(pWeapon);
+			} else {
+				upgradeCounter = UpgradeCounterForWeapon(curWeapon);
+			}
 		}
-		if (curWeapon != pWeapon && pWeapon != NUM_WEAPONS) {
+		if (curWeapon != pWeapon && pWeapon != WEAPON_PIPETOSS) {
 			curWeapon = pWeapon;
 			upgradeInterpolator.Reset(upgradeprogress);
 		} else {
