@@ -450,6 +450,7 @@ class TrailbrazlerStatusBar : BaseStatusBar {
 			} else {
 				upgradeCounter = UpgradeCounterForWeapon(curWeapon);
 			}
+			upgradeprogress = GetAmount(upgradeCounter);
 		}
 		if (curWeapon != pWeapon && pWeapon != WEAPON_PIPETOSS) {
 			curWeapon = pWeapon;
