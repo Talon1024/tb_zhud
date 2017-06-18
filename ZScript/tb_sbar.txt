@@ -254,7 +254,7 @@ class TrailbrazlerStatusBar : BaseStatusBar {
 			DrawString(lgfont, FormatNumber(ammoAmount, 4), (-200, -40), DI_TEXT_ALIGN_LEFT);
 		} else if (CPlayer.ReadyWeapon is "Skullthrottle2" || CPlayer.ReadyWeapon is "Nutcracker2") {
 			// Hexen versions of Skullthrottle and Nutcracker use both blue and green mana.
-			int ammoAmount = CPlayer.mo.FindInventory("GreenMana").Amount;
+			int ammoAmount = CPlayer.mo.FindInventory(CPlayer.ReadyWeapon.AmmoType2).Amount;
 			DrawString(lgfont, FormatNumber(ammoAmount, 4), (-200, -40), DI_TEXT_ALIGN_LEFT);
 		}
 
