@@ -249,7 +249,7 @@ class TrailbrazlerStatusBar : BaseStatusBar {
 		if (CPlayer.ReadyWeapon is "Colts" && CPlayer.mo.FindInventory("ColtsUpgrade") == null) {
 			int ammoAmount = CPlayer.mo.FindInventory(CPlayer.ReadyWeapon.AmmoType2).Amount;
 			DrawString(lgfont, FormatNumber(ammoAmount, 4), (-200, -40), DI_TEXT_ALIGN_LEFT);
-		} else if (CPlayer.ReadyWeapon is "Leadspitter" && CPlayer.mo.FindInventory("LeadspitPickupCounter").Amount >= 2) {
+		} else if (CPlayer.ReadyWeapon is "Leadspitter" && CPlayer.mo.FindInventory("LeadspitPickupCounter") != null && CPlayer.mo.FindInventory("LeadspitPickupCounter").Amount >= 2) {
 			int ammoAmount = CPlayer.mo.FindInventory("UziClipLeft").Amount;
 			DrawString(lgfont, FormatNumber(ammoAmount, 4), (-200, -40), DI_TEXT_ALIGN_LEFT);
 		} else if (CPlayer.ReadyWeapon is "Skullthrottle2" || CPlayer.ReadyWeapon is "Nutcracker2") {
@@ -376,10 +376,11 @@ class TrailbrazlerStatusBar : BaseStatusBar {
 			}
 		} else if (CPlayer.ReadyWeapon is "Skullthrottle" || CPlayer.ReadyWeapon is "Skullthrottle2") {
 			if (CPlayer.mo.FindInventory("ThrottleUpgrade") != null) {
-				DrawImage("BRWNTHRT", (-100, -30), DI_ITEM_OFFSETS);
-			} else {
-				DrawImage("CHNGX0", (-100, -30), DI_ITEM_OFFSETS);
-			}
+				DrawImage("BRWGX0", (-165, -30), DI_ITEM_OFFSETS);
+				//DrawImage("BRWNTHRT", (-100, -30), DI_ITEM_OFFSETS);
+			} //else {
+			DrawImage("CHNGX0", (-100, -30), DI_ITEM_OFFSETS);
+			//}
 			if (CPlayer.mo.FindInventory("ThrottleInstaspin") != null) {
 				DrawImage("revup", (-80, -25), DI_ITEM_OFFSETS);
 			}
