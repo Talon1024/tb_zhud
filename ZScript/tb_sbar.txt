@@ -242,7 +242,7 @@ class TrailbrazlerStatusBar : BaseStatusBar {
 		}
 
 		// Current weapon ammo
-		if (CPlayer.ReadyWeapon.AmmoType1 != null && !(CPlayer.ReadyWeapon is "Colts" && CPlayer.mo.FindInventory("ColtsUpgrade") != null && CPlayer.mo.FindInventory("ColtsUpgrade").Amount > 0)) {
+		if (CPlayer.ReadyWeapon != null && CPlayer.ReadyWeapon.AmmoType1 != null && !(CPlayer.ReadyWeapon is "Colts" && CPlayer.mo.FindInventory("ColtsUpgrade") != null && CPlayer.mo.FindInventory("ColtsUpgrade").Amount > 0)) {
 			int ammoAmount = CPlayer.mo.FindInventory(CPlayer.ReadyWeapon.AmmoType1).Amount;
 			DrawString(lgfont, FormatNumber(ammoAmount, 4), (-200, -20), DI_TEXT_ALIGN_LEFT);
 		}
